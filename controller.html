@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCRIMZONE Controller</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Saira:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-0:#070b13;--navy-1:#0d1522;--navy-2:#131e2e;--line:#1e2c40;
+  --gold:#e3b23c;--gold-hi:#f6dc8e;--gold-lo:#8a6a21;
+  --steel:#2f7fd4;--ink:#e9eff7;--dim:#8fa0b6;--ok:#4fb477;--warn:#e07a5a;--danger:#d9534f;
+  --cond:"Saira Condensed","Arial Narrow",system-ui,sans-serif;
+  --disp:"Saira",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy-0);color:var(--ink);font-family:var(--disp);font-size:14px}
+a{color:var(--gold)}
+button,input,select{font-family:inherit;font-size:14px}
+
+header{display:flex;align-items:center;gap:14px;padding:10px 18px;background:var(--navy-1);
+  border-bottom:2px solid var(--gold-lo);position:sticky;top:0;z-index:20;flex-wrap:wrap}
+header h1{font-family:var(--cond);font-size:18px;letter-spacing:.18em;font-weight:700}
+header .sp{flex:1}
+.conn{font-size:12px;color:var(--dim)}
+.conn b{color:var(--warn)}
+.conn.on b{color:var(--ok)}
+
+.group-label{max-width:1180px;margin:18px auto 6px;padding:0 16px;font-family:var(--cond);
+  font-size:12px;letter-spacing:.24em;color:var(--gold);display:flex;align-items:center;gap:10px}
+.group-label::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--gold-lo),transparent)}
+.group-label:first-of-type{margin-top:16px}
+
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 16px;display:grid;gap:14px;
+  grid-template-columns:repeat(auto-fit,minmax(330px,1fr));align-items:start}
+.panel{background:var(--navy-1);border:1px solid var(--line);border-radius:3px}
+.panel > h2{font-family:var(--cond);font-size:13px;letter-spacing:.18em;padding:9px 14px;
+  background:var(--navy-2);border-bottom:1px solid var(--line);font-weight:700;
+  display:flex;align-items:center;gap:8px}
+.panel > h2 .sp{flex:1}
+.body{padding:14px;display:flex;flex-direction:column;gap:11px}
+.wide{grid-column:1/-1}
+
+label{display:block;font-size:11px;letter-spacing:.14em;color:var(--dim);
+  font-family:var(--cond);margin-bottom:4px}
+input,select{width:100%;background:#0a111c;border:1px solid var(--line);color:var(--ink);
+  padding:8px 10px;border-radius:2px}
+input:focus,select:focus{outline:2px solid var(--gold-lo);outline-offset:-2px}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+button{background:#162233;border:1px solid var(--line);color:var(--ink);padding:9px 14px;
+  border-radius:2px;cursor:pointer;letter-spacing:.06em}
+button:hover{border-color:var(--gold-lo)}
+button:disabled{opacity:.4;cursor:default}
+button.gold{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#120d02;
+  border-color:var(--gold);font-weight:700}
+button.gold:hover{filter:brightness(1.07)}
+button.on{background:var(--gold);color:#120d02;border-color:var(--gold-hi);font-weight:700}
+button.ghost{background:transparent}
+button.danger{background:#2a1210;border-color:#5a2622;color:#f2a8a3}
+button.danger:hover{border-color:var(--danger)}
+button.sm{padding:5px 10px;font-size:12px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+
+.teamlist{max-height:300px;overflow:auto;border:1px solid var(--line);background:#09101a}
+.teamlist .it{display:flex;align-items:center;gap:10px;padding:7px 11px;border-bottom:1px solid #131d2b;cursor:pointer}
+.teamlist .it:last-child{border-bottom:0}
+.teamlist .it:hover{background:#101b29}
+.teamlist input[type=checkbox]{width:16px;flex:0 0 16px}
+.av{width:28px;height:28px;flex:0 0 28px;object-fit:contain;background:#111b28;
+  border:1px solid #1d2a3c;display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--dim);font-family:var(--cond)}
+.nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:11px;color:var(--dim)}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)}
+.chk input{width:14px}
+.badge{font-size:10px;letter-spacing:.1em;padding:2px 7px;border-radius:9px;font-family:var(--cond);font-weight:700}
+.badge.active{background:#123321;color:var(--ok)}
+.badge.inactive{background:#332215;color:var(--warn)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:8px;background:#101b29;border:1px solid var(--line);
+  padding:6px 11px;border-radius:2px;cursor:pointer}
+.chip:hover{border-color:var(--gold-lo)}
+.chip.win{border-color:var(--gold);background:#1e1a0d}
+.chip .tag{font-size:11px;color:var(--gold)}
+.slot-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.slot-card{background:#10151f;border:1px solid #252c3a;border-radius:4px;padding:14px;min-height:150px;display:flex;flex-direction:column;gap:10px}
+.slot-head{display:flex;align-items:center;gap:8px;color:var(--gold);font-family:var(--cond);font-weight:700}
+.slot-head .slot-no{font-size:12px}
+.slot-team{display:flex;align-items:center;gap:8px;min-width:0;background:#090d14;border:1px solid #252c3a;padding:6px;cursor:pointer}
+.slot-team:hover{border-color:var(--gold-lo)}
+.slot-team .slot-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.slot-team .av{width:38px;height:38px;flex-basis:38px}
+.slot-status{display:flex;justify-content:space-between;background:#090d14;padding:7px 8px;font-size:12px;font-weight:700}
+.slot-status b{color:var(--ok)}
+.slot-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.slot-actions button{padding:7px 4px;font-size:12px;font-weight:700}
+.slot-actions .kill{background:#d92d24;border-color:#ef483d}.slot-actions .alive{background:#10b96b;border-color:#24d184}
+.slot-actions .kill-down{background:#402024;color:#e57b78}.slot-actions .alive-down{background:#f39108;color:#fff}
+.slot-actions .wipe{background:#52627a}.slot-actions .reset{background:#202532;color:#aeb7c6}
+@media(max-width:900px){.slot-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.slot-grid{grid-template-columns:1fr}}
+.legacy-teams{display:none}
+.match-admin{display:none}
+.data-sources{display:none}
+
+.matchsum{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.matchsum .no{font-family:var(--cond);font-size:30px;font-weight:700;color:var(--gold-hi);letter-spacing:.05em}
+.matchsum .mp{font-family:var(--cond);font-size:16px;letter-spacing:.12em;color:var(--dim)}
+.matchsum .mp b{color:var(--ink)}
+
+.clock{font-family:var(--cond);font-size:46px;font-weight:700;letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;text-align:center;color:var(--gold-hi)}
+.empty{color:var(--dim);font-size:13px;padding:10px 0}
+.hint{font-size:11px;color:var(--dim);line-height:1.5}
+.res{display:grid;grid-template-columns:1fr 92px 64px;gap:8px;align-items:center}
+.res .pts{text-align:center;color:var(--gold);font-weight:700}
+
+.searchrow{display:flex;gap:8px;align-items:center}
+.searchrow input{flex:1}
+.teammgr{max-height:360px;overflow:auto;border:1px solid var(--line);background:#09101a}
+.teammgr .row{display:flex;align-items:center;gap:10px;padding:8px 11px;border-bottom:1px solid #131d2b}
+.teammgr .row:last-child{border-bottom:0}
+.teammgr .row:hover{background:#0e1826}
+.teammgr .meta{flex:1;min-width:0}
+.teammgr .meta .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.modal{position:fixed;inset:0;background:rgba(3,6,11,.8);display:none;z-index:40;
+  padding:24px;overflow:auto}
+.modal.open{display:block}
+.sheet{max-width:560px;margin:0 auto;background:var(--navy-1);border:1px solid var(--gold-lo);border-radius:3px}
+.sheet .head{display:flex;gap:14px;align-items:center;padding:16px;border-bottom:1px solid var(--line)}
+.sheet .head .big{width:64px;height:64px;flex:0 0 64px;object-fit:contain;background:#111b28;
+  border:1px solid #1d2a3c;display:flex;align-items:center;justify-content:center;color:var(--dim)}
+.sheet h3{font-family:var(--cond);font-size:22px;letter-spacing:.08em}
+.sect{padding:14px 16px;border-bottom:1px solid var(--line)}
+.sect:last-child{border-bottom:0}
+.sect h4{font-family:var(--cond);font-size:11px;letter-spacing:.18em;color:var(--dim);margin-bottom:8px}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center}
+.kv .n{font-family:var(--cond);font-size:26px;font-weight:700;color:var(--gold-hi)}
+.kv .l{font-size:11px;color:var(--dim)}
+ul.plain{list-style:none;display:flex;flex-direction:column;gap:5px}
+.mrow{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid #121c29;font-size:13px}
+.mrow:last-child{border-bottom:0}
+.mrow .m{font-weight:700;color:var(--gold)}
+.mrow .sp{flex:1}
+
+.confirm .sheet{max-width:420px}
+.confirm p{font-size:13px;color:var(--ink-dim,var(--dim));line-height:1.6;margin-bottom:4px}
+.confirm .warn-box{background:#231a0d;border-left:3px solid var(--gold-lo);padding:9px 12px;
+  font-size:12px;color:var(--dim);margin-top:8px}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#101b29;
+  border:1px solid var(--gold-lo);padding:10px 18px;border-radius:2px;opacity:0;
+  transition:opacity .18s;pointer-events:none;z-index:50;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.toast.err{border-color:var(--danger);color:#f2a8a3}
+.hide{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>SCRIMZONE CONTROLLER</h1>
+  <span class="sp"></span>
+  <span class="conn" id="conn">Firebase <b>connecting…</b></span>
+  <a href="./history.html" target="_blank"><button class="ghost">History</button></a>
+  <a href="./overlay.html" target="_blank"><button class="ghost">Overlay</button></a>
+</header>
+
+<!-- ============ DATA SOURCES ============ -->
+<div class="wrap data-sources">
+  <section class="panel wide">
+    <h2>Data sources<span class="sp"></span>
+      <button class="ghost sm" id="srcToggle">Show</button>
+    </h2>
+    <div class="body" id="srcBody" style="display:none">
+      <p class="hint">Point the controller at the nodes your Discord bot already writes to. These
+        settings are saved to Firebase and used by the overlay and history pages too.</p>
+      <div>
+        <div>
+          <label>Registered teams node</label>
+          <select id="teamsPath"><option value="">—</option></select>
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="gold" id="saveSrc">Save sources</button>
+        <button id="reloadRoot">Reload node list</button>
+        <button id="reloadTeams">Refresh registered teams</button>
+      </div>
+      <p class="hint" id="srcNote"></p>
+    </div>
+  </section>
+</div>
+
+<!-- ============ LIVE ============ -->
+<div class="group-label">LIVE</div>
+<div class="wrap">
+
+  <section class="panel wide">
+    <h2>Current match</h2>
+    <div class="body">
+      <div class="matchsum">
+        <span class="no" id="curNum">No active match</span>
+        <span class="mp" id="curMap"></span>
+        <span class="sp"></span>
+        <button class="danger" id="resetMatch">Reset match</button>
+      </div>
+      <p class="hint">Reset match archives everything currently set below into History, confirms the
+        save succeeded, then clears the live broadcast and deletes all teams created in this app. Discord bot data is never changed.</p>
+      <div>
+        <label>Leaderboard sort</label>
+        <div class="btnrow">
+          <button id="sortTeam">TEAM</button>
+          <button id="sortWin">WIN</button>
+          <button class="ghost" id="toggleHeader">Match header</button>
+        </div>
+        <p class="hint">These control the TEAM / WIN tabs and the clock on the overlay.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel wide">
+    <h2>12-slot team desk</h2>
+    <div class="body">
+      <div class="slot-grid" id="slotGrid"><span class="empty">No teams selected yet.</span></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Map</h2>
+    <div class="body">
+      <div class="chips" id="maps"></div>
+      <div style="max-width:140px"><label>Map number</label><input id="mapIdx" type="number" min="1" step="1" value="1"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Match timer</h2>
+    <div class="body">
+      <div class="clock" id="clock">00:00</div>
+      <div class="btnrow" style="justify-content:center">
+        <button class="gold" id="tStart">Start</button>
+        <button id="tPause">Pause</button>
+        <button class="ghost" id="tReset">Reset timer</button>
+      </div>
+      <p class="hint" style="text-align:center">Reset timer only zeroes the clock — it does not touch
+        teams, map, Booyah or history.</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- ============ MATCH ============ -->
+<div class="group-label match-admin">MATCH</div>
+<div class="wrap match-admin">
+
+  <section class="panel">
+    <h2>Next match</h2>
+    <div class="body">
+      <div class="f3">
+        <div><label>Match number</label><input id="mNum" type="number" min="1" step="1"></div>
+        <div><label>Date</label><input id="mDate" type="date"></div>
+        <div><label>Time</label><input id="mTime" type="time"></div>
+      </div>
+      <div>
+          <label>Teams for next match <span id="tCount" class="sub"></span></label>
+        <label class="chk"><input type="checkbox" id="showInactive"> Show inactive teams</label>
+        <div class="teamlist" id="teamPick"><div class="empty" style="padding:12px">Loading teams…</div></div>
+      </div>
+      <div class="btnrow">
+        <button class="gold" id="saveMatch">Save next match</button>
+        <button id="showOverlay">Show on overlay</button>
+        <button id="hideOverlay" class="ghost">Hide overlay</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Match results</h2>
+    <div class="body">
+      <div id="results"><span class="empty">No teams selected yet.</span></div>
+      <p class="hint">Placements feed directly into Reset Match — enter them, then use
+        <b>Reset match</b> above to archive and clear.</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- ============ TEAMS ============ -->
+<div class="group-label legacy-teams">TEAMS</div>
+<div class="wrap legacy-teams">
+
+  <section class="panel wide">
+    <h2>Created teams<span class="sp"></span>
+      <button class="gold sm" id="openCreate">+ Create team</button>
+    </h2>
+    <div class="body">
+      <div class="teammgr" id="teamMgrList"><div class="empty" style="padding:12px">No created teams yet.</div></div>
+      <p class="hint">Only teams created here appear in the controller. Click a team to view its details.</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- TEAM VIEW / LOGO SHEET -->
+<div class="modal" id="modal">
+  <div class="sheet">
+    <div class="head">
+      <div class="big" id="sLogo">—</div>
+      <div>
+        <h3 id="sName">—</h3>
+        <div class="sub" id="sShort"></div>
+      </div>
+      <span style="flex:1"></span>
+      <button class="ghost" id="sClose">Close</button>
+    </div>
+    <div class="sect">
+      <h4>Team logo</h4>
+      <input id="sLogoUrl" placeholder="Paste an image URL">
+      <div class="btnrow" style="margin-top:8px">
+        <button class="gold" id="sLogoSave">Save logo</button>
+        <button class="ghost" id="sLogoPick">Upload file</button>
+        <input type="file" id="sLogoFile" accept="image/*" style="display:none">
+      </div>
+      <p class="hint" style="margin-top:6px">Uploaded files are stored as data URLs in the database.
+        Keep them small — under about 100 KB.</p>
+    </div>
+    <div class="sect"><h4>Captain / IGL</h4><div id="sCaptain">Not available</div></div>
+    <div class="sect"><h4>Teammates</h4><ul class="plain" id="sPlayers"></ul></div>
+    <div class="sect">
+      <h4>Tournament record</h4>
+      <div class="kv">
+        <div><div class="n" id="sMatches">0</div><div class="l">Matches</div></div>
+        <div><div class="n" id="sBooyah">0</div><div class="l">Booyah</div></div>
+        <div><div class="n" id="sPoints">0</div><div class="l">Points</div></div>
+      </div>
+    </div>
+    <div class="sect"><h4>Recent matches</h4><div id="sRecent"></div></div>
+  </div>
+</div>
+
+<div class="modal" id="slotModal">
+  <div class="sheet">
+    <div class="head"><h3>Edit slot <span id="slotEditNumber"></span></h3><span style="flex:1"></span><button class="ghost" id="slotClose">Close</button></div>
+    <div class="sect">
+      <label>Team name</label><input id="slotName" placeholder="Team name">
+      <div style="height:8px"></div>
+      <label>Logo image URL</label><input id="slotLogo" placeholder="Paste an image URL">
+    </div>
+    <div class="sect"><div class="btnrow"><button class="gold" id="slotSave">Save slot</button><button class="ghost" id="slotCancel">Cancel</button></div></div>
+  </div>
+</div>
+
+<!-- CREATE / EDIT TEAM FORM -->
+<div class="modal" id="teamFormModal">
+  <div class="sheet">
+    <div class="head">
+      <h3 id="tfTitle">Create team</h3>
+      <span style="flex:1"></span>
+      <button class="ghost" id="tfClose">Close</button>
+    </div>
+    <div class="sect">
+      <label>Team name</label><input id="tfName" placeholder="Team Alpha">
+      <div style="height:8px"></div>
+      <label>Short name</label><input id="tfShort" placeholder="ALPHA">
+    </div>
+    <div class="sect">
+      <h4>Team logo</h4>
+      <input id="tfLogoUrl" placeholder="Paste an image URL">
+      <div class="btnrow" style="margin-top:8px">
+        <button class="ghost sm" id="tfLogoPick">Upload file</button>
+        <input type="file" id="tfLogoFile" accept="image/*" style="display:none">
+      </div>
+    </div>
+    <div class="sect">
+      <label>Captain / IGL</label><input id="tfCaptain" placeholder="Captain name">
+    </div>
+    <div class="sect">
+      <h4>Team members</h4>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input id="tfP1" placeholder="Player 1">
+        <input id="tfP2" placeholder="Player 2">
+        <input id="tfP3" placeholder="Player 3">
+        <input id="tfP4" placeholder="Player 4">
+        <input id="tfP5" placeholder="Player 5 (optional)">
+      </div>
+    </div>
+    <div class="sect">
+      <div class="btnrow">
+        <button class="gold" id="tfSave">Create team</button>
+        <button class="ghost" id="tfCancel">Cancel</button>
+      </div>
+      <p class="hint" id="tfNote"></p>
+    </div>
+  </div>
+</div>
+
+<!-- GENERIC CONFIRM MODAL -->
+<div class="modal confirm" id="confirmModal">
+  <div class="sheet">
+    <div class="head"><h3 id="cfTitle">Confirm</h3></div>
+    <div class="sect">
+      <p id="cfBody"></p>
+      <div class="warn-box hide" id="cfWarn"></div>
+    </div>
+    <div class="sect">
+      <div class="btnrow">
+        <button class="danger" id="cfOk">Confirm</button>
+        <button class="ghost" id="cfCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ============================================================
+   SCRIMZONE CONTROLLER
+   Writes only under /scrimzone/*. Reads the bot's data read-only.
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBRcMrsrifvY-VDsTRCrTMKZuib30a7wEs",
+  authDomain: "tournment-leaderboard.firebaseapp.com",
+  databaseURL: "https://tournment-leaderboard-default-rtdb.firebaseio.com",
+  projectId: "tournment-leaderboard",
+  storageBucket: "tournment-leaderboard.firebasestorage.app",
+  messagingSenderId: "685244342962",
+  appId: "1:685244342962:web:d31c15a67fb9b6161f5fab",
+  measurementId: "G-RKSK1ZBC5M"
+};
+const DBURL = firebaseConfig.databaseURL;
+const P = { config:"scrimzone/config", live:"scrimzone/live", timer:"scrimzone/timer",
+            logos:"scrimzone/logos", wins:"scrimzone/wins",
+            history:"scrimzone/history", teamHistory:"scrimzone/teamHistory",
+            teams:"scrimzone/teams", overrides:"scrimzone/teamOverrides",
+            status:"scrimzone/teamStatus" };
+
+const MAPS = ["Bermuda","Purgatory","Kalahari","Bermuda Remastered","Alpine","NeXTerra","Solara"];
+const POINTS = {1:12,2:9,3:8,4:7,5:6,6:5,7:4,8:3,9:2,10:1,11:0,12:0};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
+
+let cfg = {}, live = {}, timer = {running:false,base:0,startedAt:0}, offset = 0;
+let teamsCache = {};       // bot-registered teams (read-only, from cfg.teamsPath)
+let customTeams = {};      // /scrimzone/teams — admin-created, fully owned
+let overrides = {};        // /scrimzone/teamOverrides — edits layered on bot teams
+let statusMap = {};        // /scrimzone/teamStatus — active/inactive per id
+let logosCache = {};
+let selected = new Set();
+let teamsSourceRef = null;
+let teamsSourcePath = "";
+
+/* ---------- helpers ---------- */
+const pick = (o,ks)=>{ if(!o||typeof o!=="object") return null;
+  for(const k of ks){const v=o[k]; if(v!==undefined&&v!==null&&v!=="") return v;} return null; };
+const tName  = t => pick(t,["name","teamName","team_name","team","title","tag"]);
+const tShort = t => pick(t,["short","shortName","short_name","tag","abbr","abbreviation","code"]);
+const tLogo  = t => pick(t,["logo","logoUrl","logo_url","image","icon","avatar"]);
+const tCap   = t => { const c = pick(t,["captain","igl","IGL","leader","owner","captainName","captain_name"]);
+  return typeof c === "object" ? pick(c,["name","ign","username","tag","displayName"]) : c; };
+function tPlayers(t){
+  let p = pick(t,["players","members","roster","teammates","squad"]);
+  if(!p) return [];
+  const arr = Array.isArray(p) ? p : Object.values(p);
+  return arr.map(x => typeof x === "object"
+      ? (pick(x,["name","ign","username","tag","displayName","player"]) || "")
+      : String(x)).filter(Boolean);
+}
+
+const isCustom = id => Object.prototype.hasOwnProperty.call(customTeams, id);
+function recordFor(id){
+  if (isCustom(id)) return customTeams[id] || {};
+  const base = teamsCache[id] || {};
+  const ov = overrides[id];
+  if (!ov) return base;
+  const merged = Object.assign({}, base);
+  ["name","shortName","captain"].forEach(k => { if (ov[k] != null && ov[k] !== "") merged[k] = ov[k]; });
+  if (ov.players) merged.players = ov.players;
+  return merged;
+}
+function allIds(){
+  return Object.keys(customTeams);
+}
+function selectableIds(){
+  return [...new Set([...Object.keys(teamsCache), ...Object.keys(customTeams)])];
+}
+const statusOf = id => statusMap[id] || "active";
+const label = (id) => (logosCache[id] && logosCache[id].short) || tShort(recordFor(id)) || tName(recordFor(id)) || id;
+const fullName = (id) => tName(recordFor(id)) || label(id);
+const logoOf = (id) => (logosCache[id] && logosCache[id].url) || tLogo(recordFor(id)) || null;
+
+function toast(m, isErr){ const t=$("toast"); t.textContent=m; t.className="toast show"+(isErr?" err":"");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
+function avatar(id, cls){
+  const url = logoOf(id);
+  if(url){ const i=document.createElement("img"); i.className=cls; i.src=url; i.alt="";
+    i.onerror=()=>i.replaceWith(ph(id,cls)); return i; }
+  return ph(id,cls);
+}
+function ph(id, cls){ const d=document.createElement("div"); d.className=cls;
+  d.textContent=String(label(id)).replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()||"?"; return d; }
+function fmtClock(sec){ sec=Math.max(0,Math.floor(sec));
+  const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60,p=n=>String(n).padStart(2,"0");
+  return h? h+":"+p(m)+":"+p(s) : p(m)+":"+p(s); }
+function fmtDate(d){ if(!d) return ""; const x=new Date(d+"T00:00:00");
+  return isNaN(x) ? d : x.toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}); }
+function ordinal(n){ const s=["th","st","nd","rd"], v=n%100; return s[(v-20)%10]||s[v]||s[0]; }
+
+/* ---------- generic confirm modal ---------- */
+function confirmAction({title, body, warn, okLabel}){
+  return new Promise(resolve => {
+    $("cfTitle").textContent = title;
+    $("cfBody").textContent = body;
+    const w = $("cfWarn");
+    if (warn) { w.textContent = warn; w.classList.remove("hide"); } else w.classList.add("hide");
+    $("cfOk").textContent = okLabel || "Confirm";
+    $("confirmModal").classList.add("open");
+    const done = (v) => { $("confirmModal").classList.remove("open"); cleanup(); resolve(v); };
+    const onOk = () => done(true), onCancel = () => done(false);
+    const onBg = e => { if (e.target === $("confirmModal")) done(false); };
+    function cleanup(){ $("cfOk").removeEventListener("click", onOk); $("cfCancel").removeEventListener("click", onCancel); $("confirmModal").removeEventListener("click", onBg); }
+    $("cfOk").addEventListener("click", onOk);
+    $("cfCancel").addEventListener("click", onCancel);
+    $("confirmModal").addEventListener("click", onBg);
+  });
+}
+
+/* ---------- connection ---------- */
+db.ref(".info/connected").on("value", s=>{
+  const on = s.val() === true;
+  $("conn").className = "conn" + (on?" on":"");
+  $("conn").innerHTML = "Firebase <b>" + (on?"connected":"offline") + "</b>";
+});
+db.ref(".info/serverTimeOffset").on("value", s => offset = s.val() || 0);
+
+/* ---------- data sources ---------- */
+$("srcToggle").onclick = () => {
+  const b = $("srcBody"); const open = b.style.display !== "none";
+  b.style.display = open ? "none" : "flex";
+  $("srcToggle").textContent = open ? "Show" : "Hide";
+  if(!open && !$("teamsPath").dataset.loaded) loadRoot();
+};
+$("reloadRoot").onclick = loadRoot;
+$("reloadTeams").onclick = loadTeams;
+
+async function loadRoot(){
+  $("srcNote").textContent = "Reading top-level node names…";
+  try{
+    const r = await fetch(DBURL + "/.json?shallow=true");
+    const j = await r.json();
+    if(!j || typeof j !== "object") throw new Error("No readable root");
+    const keys = Object.keys(j).sort();
+    for(const sel of [$("teamsPath")]){
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">—</option>';
+      keys.forEach(k => { const o=document.createElement("option"); o.value=k; o.textContent="/"+k; sel.append(o); });
+      sel.value = cur;
+      sel.dataset.loaded = "1";
+    }
+    $("teamsPath").value = cfg.teamsPath || "";
+    $("srcNote").textContent = keys.length + " top-level nodes found.";
+  }catch(e){
+    $("srcNote").textContent = "Could not read the node list (" + e.message +
+      "). Your database rules may require authentication.";
+  }
+}
+$("saveSrc").onclick = async () => {
+  await db.ref(P.config).update({ teamsPath:$("teamsPath").value });
+  toast("Sources saved");
+  loadTeams();
+};
+
+db.ref(P.config).on("value", s => {
+  cfg = s.val() || {};
+  if($("teamsPath").dataset.loaded){ $("teamsPath").value = cfg.teamsPath||""; }
+  bindTeamsSource();
+});
+
+/* ---------- registered teams (live Discord bot source) ---------- */
+function renderTeamData(){
+  renderTeamPicker(); renderTeamMgr(); renderAll();
+  if(sheetId) paintTeamSheet(sheetId);
+}
+
+function bindTeamsSource(){
+  const path = cfg.teamsPath || "";
+  if(path === teamsSourcePath && teamsSourceRef) return;
+  if(teamsSourceRef) teamsSourceRef.off("value", teamsSourceRef._cb);
+  teamsSourceRef = null; teamsSourcePath = path; teamsCache = {};
+  if(!path){ renderTeamData(); return; }
+  const ref = db.ref(path);
+  const cb = s => { const val = s.val(); teamsCache = (val && typeof val === "object") ? val : {}; renderTeamData(); };
+  ref._cb = cb; teamsSourceRef = ref;
+  ref.on("value", cb, e => toast("Could not read /" + path + " — " + e.message, true));
+}
+
+async function loadTeams(){
+  if(!cfg.teamsPath){
+    teamsCache = {};
+    renderTeamData();
+    return;
+  }
+  try{
+    const snap = await db.ref(cfg.teamsPath).limitToFirst(400).once("value");
+    const val = snap.val();
+    teamsCache = (val && typeof val === "object") ? val : {};
+  }catch(e){
+    toast("Could not read /" + cfg.teamsPath + " — " + e.message, true);
+    teamsCache = {};
+  }
+  renderTeamData();
+}
+
+db.ref(P.logos).on("value", s => { logosCache = s.val() || {}; renderTeamData(); });
+db.ref(P.teams).on("value", s => { customTeams = s.val() || {}; renderTeamPicker(); renderTeamMgr(); renderAll(); });
+db.ref(P.overrides).on("value", s => { overrides = s.val() || {}; renderTeamPicker(); renderTeamMgr(); renderAll(); });
+db.ref(P.status).on("value", s => { statusMap = s.val() || {}; renderTeamPicker(); renderTeamMgr(); });
+
+$("showInactive").onchange = renderTeamPicker;
+
+function renderTeamPicker(){
+  const box = $("teamPick"); const showInactive = $("showInactive").checked;
+  let ids = selectableIds().filter(id => showInactive || statusOf(id) === "active");
+  $("tCount").textContent = ids.length ? "(" + ids.length + ")" : "";
+  if(!ids.length){ box.innerHTML = '<div class="empty" style="padding:12px">' +
+    (cfg.teamsPath ? "No teams found at the configured Discord bot path." :
+     "No teams node selected. Open <b>Data sources</b> above to choose one, or create a team below.") +
+    '</div>'; return; }
+  ids.sort((a,b)=>String(fullName(a)).localeCompare(String(fullName(b))));
+  box.innerHTML = "";
+  ids.forEach(id => {
+    const row = document.createElement("label"); row.className = "it";
+    const cb = document.createElement("input"); cb.type="checkbox"; cb.checked = selected.has(id);
+    cb.onchange = () => { cb.checked ? selected.add(id) : selected.delete(id); };
+    const nm = document.createElement("div"); nm.className="nm";
+    nm.innerHTML = "<div>" + esc(fullName(id)) + "</div>" +
+                   (tShort(recordFor(id)) ? "<div class='sub'>" + esc(tShort(recordFor(id))) + "</div>" : "");
+    row.append(cb, avatar(id,"av"), nm);
+    if(statusOf(id) === "inactive"){ const b=document.createElement("span"); b.className="badge inactive"; b.textContent="INACTIVE"; row.append(b); }
+    box.append(row);
+  });
+}
+
+/* ---------- live state ---------- */
+db.ref(P.live).on("value", s => {
+  live = s.val() || {};
+  if(document.activeElement !== $("mNum"))  $("mNum").value  = live.matchNumber ?? "";
+  if(document.activeElement !== $("mDate")) $("mDate").value = live.date || "";
+  if(document.activeElement !== $("mTime")) $("mTime").value = live.time || "";
+  if(document.activeElement !== $("mapIdx"))$("mapIdx").value= live.mapIndex ?? 1;
+  if(Array.isArray(live.teamIds)) selected = new Set(live.teamIds);
+  renderTeamPicker();
+  renderAll();
+});
+
+$("saveMatch").onclick = async () => {
+  const ids = [...selected];
+  if(!ids.length) return toast("Select at least one team", true);
+  await db.ref(P.live).update({
+    matchNumber: $("mNum").value ? Number($("mNum").value) : null,
+    date: $("mDate").value || null,
+    time: $("mTime").value || null,
+    teamIds: ids,
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  });
+  toast("Next match saved");
+};
+$("showOverlay").onclick = async () => {
+  if(!Array.isArray(live.teamIds) || !live.teamIds.length) return toast("Save the match first", true);
+  await db.ref(P.live).update({ visible:true }); toast("Live on overlay");
+};
+$("hideOverlay").onclick = async () => { await db.ref(P.live).update({ visible:false }); toast("Overlay hidden"); };
+
+/* ---------- playing teams / booyah / map / results / current match summary ---------- */
+function renderAll(){ renderPlaying(); renderBooyah(); renderMaps(); renderResults(); renderCurrentSummary(); }
+
+function renderCurrentSummary(){
+  const ids = live.teamIds || [];
+  $("curNum").textContent = ids.length ? ("MATCH " + (live.matchNumber != null ? "#" + live.matchNumber : "—")) : "No active match";
+  $("curMap").innerHTML = ids.length ? ("Map: <b>" + esc(live.map || "not set") + "</b> &nbsp;·&nbsp; Teams: <b>" + ids.length + "</b>") : "";
+  $("resetMatch").disabled = !ids.length;
+  const sort = live.sortBy === "team" ? "team" : "win";
+  $("sortTeam").classList.toggle("on", sort === "team");
+  $("sortWin").classList.toggle("on", sort === "win");
+  $("toggleHeader").classList.toggle("on", live.showHeader !== false);
+}
+
+$("sortTeam").onclick = () => db.ref(P.live).update({ sortBy:"team" });
+$("sortWin").onclick  = () => db.ref(P.live).update({ sortBy:"win" });
+$("toggleHeader").onclick = () => db.ref(P.live).update({ showHeader: live.showHeader === false });
+
+function renderPlaying(){
+  const box = $("slotGrid");
+  const ids = Array.isArray(live.slotIds) ? live.slotIds : Array.from({length:12},(_,i)=>(live.teamIds||[])[i]||null);
+  box.innerHTML = "";
+  for(let i=0;i<12;i++){
+    const configured=!!ids[i], id=ids[i] || "slot-"+(i+1);
+    const c=document.createElement("div"); c.className="slot-card";
+    const head=document.createElement("div"); head.className="slot-head"; head.innerHTML="<span class='slot-no'>#"+(i+1)+"</span><span>SLOT "+(i+1)+"</span>";
+    const team=document.createElement("div"); team.className="slot-team";
+    const name=document.createElement("span"); name.className="slot-name"; name.textContent=configured?fullName(id):"CLICK TO ADD TEAM";
+    team.append(avatar(id,"av")); team.append(name); team.onclick=()=>openSlotEditor(id,i+1);
+    const booyah=document.createElement("div"); booyah.className="slot-actions";
+    const count=id?Number((live.booyahCounts||{})[id])||0:0;
+    booyah.append(slotButton("BOOYAH - "+count,"reset",()=>updateBooyah(id,-1)),slotButton("BOOYAH +","alive",()=>updateBooyah(id,1)));
+    if(!configured){ booyah.querySelectorAll("button").forEach(b=>b.disabled=true); }
+    c.append(head,team,booyah); box.append(c);
+  }
+}
+
+function slotButton(text,cls,fn){const b=document.createElement("button");b.className=cls;b.textContent=text;b.onclick=fn;return b;}
+async function updateSlotStat(id,key,delta){
+  const all=Object.assign({},live.slotStats||{}), next=Object.assign({},all[id]||{});
+  next[key]=Math.max(0,(Number(next[key])||0)+delta); if(key==="alive") next[key]=Math.min(4,next[key]); all[id]=next;
+  await db.ref(P.live).update({slotStats:all});
+}
+async function resetSlot(id){const all=Object.assign({},live.slotStats||{});all[id]={kills:0,alive:4};await db.ref(P.live).update({slotStats:all});}
+async function updateBooyah(id,delta){
+  const all=Object.assign({},live.booyahCounts||{}), next=Math.max(0,(Number(all[id])||0)+delta); all[id]=next;
+  await db.ref(P.live).update({booyah:next>0?id:(live.booyah===id?null:live.booyah),booyahCounts:all,booyahPulse:Date.now()});
+}
+let slotEditId=null,slotEditIndex=-1;
+function openSlotEditor(id,number){
+  slotEditId=id; slotEditIndex=number-1; const t=recordFor(id); $("slotEditNumber").textContent="#"+number;
+  $("slotName").value=id.indexOf("slot-")===0&&!isCustom(id)?"":fullName(id); $("slotLogo").value=(logosCache[id]&&logosCache[id].url)||tLogo(t)||""; $("slotModal").classList.add("open");
+}
+$("slotClose").onclick=$("slotCancel").onclick=()=>$("slotModal").classList.remove("open");
+$("slotModal").onclick=e=>{if(e.target===$("slotModal"))$("slotModal").classList.remove("open");};
+$("slotSave").onclick=async()=>{
+  if(!slotEditId)return; const name=$("slotName").value.trim(),logo=$("slotLogo").value.trim();
+  if(!name)return toast("Team name is required",true);
+  if(slotEditId.indexOf("slot-")===0&&!isCustom(slotEditId)) await db.ref(P.teams+"/"+slotEditId).set({name,shortName:null,players:{},createdAt:firebase.database.ServerValue.TIMESTAMP});
+  else if(isCustom(slotEditId)) await db.ref(P.teams+"/"+slotEditId).update({name});
+  else await db.ref(P.overrides+"/"+slotEditId).update({name});
+  if(logo)await db.ref(P.logos+"/"+slotEditId).update({url:logo}); else await db.ref(P.logos+"/"+slotEditId+"/url").remove();
+  const slots=Array.isArray(live.slotIds)?live.slotIds.slice(0,12):Array.from({length:12},(_,i)=>(live.teamIds||[])[i]||null); slots[slotEditIndex]=slotEditId;
+  await db.ref(P.live).update({slotIds:slots,teamIds:slots.filter(Boolean)});
+  $("slotModal").classList.remove("open");toast("Slot saved");
+};
+
+function renderBooyah(){
+  return;
+}
+
+function renderMaps(){
+  const box = $("maps"); box.innerHTML = "";
+  MAPS.forEach(m => {
+    const b = document.createElement("button");
+    b.textContent = m; if(live.map === m) b.className = "on";
+    b.onclick = () => setMap(m);
+    box.append(b);
+  });
+}
+async function setMap(m){
+  const patch = { map:m, updatedAt: firebase.database.ServerValue.TIMESTAMP };
+  if(Array.isArray(live.teamIds) && live.teamIds.length) patch.visible = true;
+  try{
+    await db.ref(P.live).update(patch);
+    toast("Map: " + m);
+  }catch(e){
+    toast("Could not set map: " + e.message, true);
+  }
+}
+$("mapIdx").onchange = async () => {
+  const mapIndex = Number($("mapIdx").value) || 1;
+  const patch = { mapIndex, updatedAt: firebase.database.ServerValue.TIMESTAMP };
+  if(Array.isArray(live.teamIds) && live.teamIds.length) patch.visible = true;
+  try{
+    await db.ref(P.live).update(patch);
+  }catch(e){
+    toast("Could not set map number: " + e.message, true);
+  }
+};
+
+function renderResults(){
+  const box = $("results"); const ids = live.teamIds || [];
+  if(!ids.length){ box.innerHTML = '<span class="empty">No teams selected yet.</span>'; return; }
+  const prev = {}; box.querySelectorAll("input[data-id]").forEach(i => prev[i.dataset.id] = i.value);
+  box.innerHTML = "";
+  ids.forEach(id => {
+    const r = document.createElement("div"); r.className = "res"; r.style.marginBottom = "8px";
+    const n = document.createElement("div"); n.textContent = fullName(id);
+    const i = document.createElement("input"); i.type="number"; i.min=1; i.max=12; i.step=1;
+    i.dataset.id = id; i.placeholder = "Placement"; i.value = prev[id] || "";
+    const p = document.createElement("div"); p.className="pts";
+    const upd = () => { const v = Number(i.value); p.textContent = POINTS[v] != null ? POINTS[v] + " pts" : "—"; };
+    i.oninput = upd; upd();
+    r.append(n, i, p); box.append(r);
+  });
+}
+function currentPlacements(){
+  const rows = [];
+  for(const i of $("results").querySelectorAll("input[data-id]")){
+    const v = Number(i.value);
+    if(!v) continue;
+    if(POINTS[v] == null) continue;
+    rows.push({ teamId:i.dataset.id, name:fullName(i.dataset.id), placement:v, points:POINTS[v] });
+  }
+  return rows;
+}
+
+/* ---------- RESET MATCH: archive -> verify -> clear ---------- */
+$("resetMatch").onclick = async () => {
+  const ids = live.teamIds || [];
+  if(!ids.length) return;
+
+  const rows = currentPlacements();
+  const places = rows.map(r => r.placement);
+  if(new Set(places).size !== places.length){
+    return toast("Two teams share the same placement — fix that before resetting", true);
+  }
+
+  const ok = await confirmAction({
+    title: "Reset current match?",
+    body: "This will archive the current match, clear the active broadcast, and delete all teams created in this app. Discord bot data will not be changed.",
+    warn: rows.length < ids.length
+      ? (ids.length - rows.length) + " of " + ids.length + " teams have no placement entered — they will be archived without points."
+      : null,
+    okLabel: "Reset & save to history"
+  });
+  if(!ok) return;
+
+  rows.sort((a,b) => a.placement - b.placement);
+  const key = db.ref(P.history).push().key;
+  const entry = {
+    matchNumber: live.matchNumber ?? null,
+    date: live.date || null,
+    time: live.time || null,
+    map: live.map || null,
+    mapIndex: live.mapIndex ?? null,
+    teamIds: ids,
+    booyah: live.booyah || null,
+    booyahCounts: live.booyahCounts || {},
+    booyahName: live.booyah ? fullName(live.booyah) : null,
+    results: rows,
+    matchStatus: rows.length === ids.length ? "completed" : "reset",
+    completedAt: firebase.database.ServerValue.TIMESTAMP
+  };
+
+  /* STEP 1+2: archive */
+  try{
+    await db.ref(P.history + "/" + key).set(entry);
+  }catch(e){
+    toast("Could not save match to history. Nothing was deleted.", true);
+    return;
+  }
+
+  /* STEP 3: verify */
+  let verified = null;
+  try{ verified = (await db.ref(P.history + "/" + key).once("value")).val(); }
+  catch(e){ verified = null; }
+  if(!verified){
+    toast("Could not confirm the history save. Nothing was deleted.", true);
+    return;
+  }
+
+  /* per-team history + win count — best effort, does not block the clear */
+  try{
+    const updates = {};
+    rows.forEach(r => {
+      updates[P.teamHistory + "/" + r.teamId + "/" + key] = {
+        matchNumber: entry.matchNumber, date: entry.date, map: entry.map,
+        placement: r.placement, points: r.points, booyah: live.booyah === r.teamId
+      };
+    });
+    if(Object.keys(updates).length) await db.ref().update(updates);
+    const booyahCounts = live.booyahCounts || {};
+    for(const id of Object.keys(booyahCounts)){
+      const count = Number(booyahCounts[id]) || 0;
+      if(count > 0) await db.ref(P.wins + "/" + id).transaction(v => (v || 0) + count);
+    }
+  }catch(e){ /* history is already safe; a stats hiccup here isn't destructive */ }
+
+  /* STEP 4+5: clear active broadcast, only now that history is confirmed */
+  try{
+    await db.ref(P.live).set({ visible:false, teamIds:[], matchNumber:null, date:null, time:null,
+      map:null, mapIndex:null, booyah:null, booyahCounts:null, sortBy: live.sortBy || "win",
+      showHeader: live.showHeader !== false,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP });
+    await db.ref(P.timer).set({ running:false, base:0, startedAt:0 });
+
+    const removeTeams = {};
+    Object.keys(customTeams).forEach(id => {
+      removeTeams[P.teams + "/" + id] = null;
+      removeTeams[P.status + "/" + id] = null;
+      removeTeams[P.logos + "/" + id] = null;
+    });
+    if(Object.keys(removeTeams).length) await db.ref().update(removeTeams);
+  }catch(e){
+    toast("Match archived, but clearing the scrim or created teams failed — check Firebase.", true);
+    return;
+  }
+
+  selected = new Set();
+  toast("Match reset — archived to history");
+};
+
+/* ---------- timer ---------- */
+db.ref(P.timer).on("value", s => { timer = s.val() || {running:false,base:0,startedAt:0}; paintClock(); });
+function elapsed(){
+  const base = Number(timer.base) || 0;
+  if(!timer.running || !timer.startedAt) return base;
+  return base + (Date.now() + offset - Number(timer.startedAt)) / 1000;
+}
+function paintClock(){ $("clock").textContent = fmtClock(elapsed()); }
+setInterval(paintClock, 250);
+$("tStart").onclick = () => db.ref(P.timer).set({
+  running:true, base:Number(timer.base)||0, startedAt:firebase.database.ServerValue.TIMESTAMP });
+$("tPause").onclick = () => db.ref(P.timer).set({ running:false, base:elapsed(), startedAt:0 });
+$("tReset").onclick = () => { db.ref(P.timer).set({ running:false, base:0, startedAt:0 }); toast("Timer reset"); };
+
+/* ---------- team sheet (view / logo) ---------- */
+let sheetId = null;
+$("sClose").onclick = () => $("modal").classList.remove("open");
+$("modal").onclick = e => { if(e.target === $("modal")) $("modal").classList.remove("open"); };
+document.addEventListener("keydown", e => { if(e.key === "Escape"){ $("modal").classList.remove("open"); $("teamFormModal").classList.remove("open"); $("confirmModal").classList.remove("open"); } });
+
+async function openTeam(id){
+  sheetId = id;
+  paintTeamSheet(id);
+  $("sMatches").textContent = "0"; $("sBooyah").textContent = "0"; $("sPoints").textContent = "0";
+  $("sRecent").innerHTML = "<div class='sub'>Loading…</div>";
+  $("modal").classList.add("open");
+
+  try{
+    const snap = await db.ref(P.teamHistory + "/" + id).limitToLast(60).once("value");
+    const v = snap.val() || {};
+    const list = Object.values(v);
+    if(!list.length){ $("sRecent").innerHTML = "<div class='sub'>Not available</div>"; return; }
+    $("sMatches").textContent = list.length;
+    $("sBooyah").textContent  = list.filter(x => x.booyah).length;
+    $("sPoints").textContent = list.reduce((a,x) => a + (x.points||0), 0);
+    list.sort((a,b) => (b.matchNumber||0) - (a.matchNumber||0));
+    $("sRecent").innerHTML = list.slice(0,6).map(x =>
+      "<div class='mrow'><span class='m'>Match #" + esc(x.matchNumber ?? "?") + "</span>" +
+      "<span class='sub'>" + esc(fmtDate(x.date)) + "</span>" +
+      "<span class='sub'>" + esc(x.map || "") + "</span><span class='sp'></span>" +
+      "<span>" + esc(x.placement) + ordinal(x.placement) + "</span>" +
+      "<span class='m'>" + esc(x.points) + " pts</span>" +
+      (x.booyah ? "<span class='tag'>BOOYAH</span>" : "") + "</div>").join("");
+  }catch(e){ $("sRecent").innerHTML = "<div class='sub'>Not available</div>"; }
+}
+
+function paintTeamSheet(id){
+  if(!id) return;
+  const t = recordFor(id);
+  $("sName").textContent = fullName(id);
+  $("sShort").textContent = tShort(t) || "";
+  $("sLogoUrl").value = (logosCache[id] && logosCache[id].url) || "";
+  const holder = $("sLogo"); holder.replaceWith(Object.assign(avatar(id,"big"), {id:"sLogo"}));
+  $("sCaptain").textContent = tCap(t) || "Not available";
+
+  const players = tPlayers(t);
+  $("sPlayers").innerHTML = players.length
+    ? players.map(p => "<li>" + esc(p) + "</li>").join("")
+    : "<li class='sub'>Not available</li>";
+}
+
+$("sLogoSave").onclick = async () => {
+  const url = $("sLogoUrl").value.trim();
+  if(!sheetId) return;
+  if(url) await db.ref(P.logos + "/" + sheetId).update({ url });
+  else     await db.ref(P.logos + "/" + sheetId + "/url").remove();
+  toast("Logo saved");
+};
+$("sLogoPick").onclick = () => $("sLogoFile").click();
+$("sLogoFile").onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  if(f.size > 200000) return toast("File too large — keep it under 200 KB", true);
+  const r = new FileReader();
+  r.onload = () => { $("sLogoUrl").value = r.result; toast("Loaded — press Save logo"); };
+  r.readAsDataURL(f);
+};
+
+function renderTeamMgr(){
+  const box = $("teamMgrList");
+  let ids = allIds();
+
+  if(!ids.length){
+    box.innerHTML = '<div class="empty" style="padding:12px">' +
+      "No created teams yet — create one above." + '</div>';
+    return;
+  }
+  ids.sort((a,b)=>String(fullName(a)).localeCompare(String(fullName(b))));
+  box.innerHTML = "";
+  ids.forEach(id => {
+    const row = document.createElement("div"); row.className = "row";
+    row.onclick = () => openTeam(id);
+    row.append(avatar(id, "av"));
+    const meta = document.createElement("div"); meta.className = "meta";
+    meta.innerHTML = "<div class='n'>" + esc(fullName(id)) + "</div><div class='sub'>" +
+      esc(tShort(recordFor(id)) || "") + " · created here</div>";
+    row.append(meta);
+    box.append(row);
+  });
+}
+
+async function toggleStatus(id){
+  const next = statusOf(id) === "active" ? "inactive" : "active";
+  await db.ref(P.status + "/" + id).set(next);
+  toast(fullName(id) + " marked " + next);
+}
+
+async function deleteTeam(id){
+  const custom = isCustom(id);
+  const ok = await confirmAction({
+    title: "Delete team?",
+    body: "The team's previous match history will be preserved.",
+    warn: custom
+      ? null
+      : "This team is registered by your Discord bot — Scrimzone can't delete it from Discord's data. " +
+        "Deleting here marks it inactive and hides it from selection lists; the bot's original record stays intact.",
+    okLabel: "Delete team"
+  });
+  if(!ok) return;
+
+  if(custom){
+    await db.ref(P.teams + "/" + id).remove();
+    await db.ref(P.status + "/" + id).remove();
+    await db.ref(P.logos + "/" + id).remove();
+  } else {
+    await db.ref(P.status + "/" + id).set("inactive");
+  }
+  selected.delete(id);
+  toast("Team deleted");
+}
+
+/* ---- create / edit form ---- */
+let formId = null;
+$("openCreate").onclick = () => openTeamForm(null);
+$("tfClose").onclick = $("tfCancel").onclick = () => $("teamFormModal").classList.remove("open");
+$("teamFormModal").onclick = e => { if(e.target === $("teamFormModal")) $("teamFormModal").classList.remove("open"); };
+
+function openTeamForm(id){
+  formId = id;
+  const t = id ? recordFor(id) : {};
+  $("tfTitle").textContent = id ? "Edit team" : "Create team";
+  $("tfSave").textContent = id ? "Save changes" : "Create team";
+  $("tfName").value = tName(t) || "";
+  $("tfShort").value = tShort(t) || "";
+  $("tfLogoUrl").value = id ? ((logosCache[id] && logosCache[id].url) || tLogo(t) || "") : "";
+  $("tfCaptain").value = tCap(t) || "";
+  const players = tPlayers(t);
+  ["tfP1","tfP2","tfP3","tfP4","tfP5"].forEach((k,i) => $(k).value = players[i] || "");
+  $("tfNote").textContent = id && !isCustom(id)
+    ? "Editing a bot-registered team saves an override — the bot's own record is untouched."
+    : "";
+  $("teamFormModal").classList.add("open");
+}
+$("tfLogoPick").onclick = () => $("tfLogoFile").click();
+$("tfLogoFile").onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  if(f.size > 200000) return toast("File too large — keep it under 200 KB", true);
+  const r = new FileReader();
+  r.onload = () => { $("tfLogoUrl").value = r.result; };
+  r.readAsDataURL(f);
+};
+
+$("tfSave").onclick = async () => {
+  const name = $("tfName").value.trim();
+  if(!name) return toast("Team name is required", true);
+  const players = ["tfP1","tfP2","tfP3","tfP4"].map(k => $(k).value.trim());
+  if(players.some(p => !p)) return toast("Players 1 through 4 are required", true);
+  const p5 = $("tfP5").value.trim();
+
+  const playersObj = { player1:players[0], player2:players[1], player3:players[2], player4:players[3] };
+  if(p5) playersObj.player5 = p5;
+
+  const record = {
+    name,
+    shortName: $("tfShort").value.trim() || null,
+    captain: $("tfCaptain").value.trim() || null,
+    players: playersObj
+  };
+
+  const wasEditing = !!formId;
+  try{
+    if(formId && isCustom(formId)){
+      await db.ref(P.teams + "/" + formId).update(record);
+    } else if(formId){
+      await db.ref(P.overrides + "/" + formId).set(record);
+    } else {
+      const key = db.ref(P.teams).push().key;
+      record.createdAt = firebase.database.ServerValue.TIMESTAMP;
+      await db.ref(P.teams + "/" + key).set(record);
+      formId = key;
+    }
+    const url = $("tfLogoUrl").value.trim();
+    if(url) await db.ref(P.logos + "/" + formId).update({ url });
+    toast(wasEditing ? "Team saved" : "Team created");
+    $("teamFormModal").classList.remove("open");
+  }catch(e){ toast("Could not save team: " + e.message, true); }
+};
+
+renderAll();
+</script>
+</body>
+</html>

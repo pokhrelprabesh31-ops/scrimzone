@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCRIMZONE Match History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Saira:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy-0:#070b13;--navy-1:#0d1522;--navy-2:#131e2e;--line:#1e2c40;
+  --gold:#e3b23c;--gold-hi:#f6dc8e;--gold-lo:#8a6a21;--ink:#e9eff7;--dim:#8fa0b6;
+  --cond:"Saira Condensed","Arial Narrow",system-ui,sans-serif;--disp:"Saira",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy-0);color:var(--ink);font-family:var(--disp);font-size:14px}
+header{display:flex;align-items:center;gap:14px;padding:10px 18px;background:var(--navy-1);
+  border-bottom:2px solid var(--gold-lo);position:sticky;top:0;z-index:5}
+header h1{font-family:var(--cond);font-size:18px;letter-spacing:.18em;font-weight:700}
+header .sp{flex:1}
+button,select{font-family:inherit;font-size:14px;background:#162233;border:1px solid var(--line);
+  color:var(--ink);padding:8px 13px;border-radius:2px;cursor:pointer}
+button:hover,select:hover{border-color:var(--gold-lo)}
+.wrap{max-width:900px;margin:0 auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+.filter{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filter label{font-family:var(--cond);font-size:11px;letter-spacing:.16em;color:var(--dim)}
+
+.match{background:var(--navy-1);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.match .top{display:flex;align-items:baseline;gap:14px;padding:12px 16px;background:var(--navy-2);
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.match .no{font-family:var(--cond);font-size:22px;font-weight:700;letter-spacing:.08em;color:var(--gold-hi)}
+.match .meta{color:var(--dim);font-size:13px}
+.match .map{margin-left:auto;font-family:var(--cond);letter-spacing:.16em;color:var(--gold);font-size:15px}
+.booyah{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.booyah .l{font-family:var(--cond);font-size:11px;letter-spacing:.18em;color:var(--dim)}
+.booyah .v{font-weight:700;color:var(--gold-hi)}
+.rows{padding:6px 0}
+.r{display:grid;grid-template-columns:44px 1fr 90px;align-items:center;gap:10px;
+  padding:8px 16px;border-bottom:1px solid #121c29}
+.r:last-child{border-bottom:0}
+.r .p{font-family:var(--cond);font-size:19px;font-weight:700;color:var(--dim);text-align:center}
+.r.top1 .p,.r.top1 .n{color:var(--gold-hi)}
+.r .pts{text-align:right;font-family:var(--cond);font-size:17px;font-weight:700;color:var(--gold)}
+.empty{color:var(--dim);padding:26px;text-align:center;background:var(--navy-1);
+  border:1px solid var(--line);border-radius:3px}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;background:var(--navy-1);
+  border:1px solid var(--gold-lo);border-radius:3px;padding:14px;text-align:center}
+.sum .n{font-family:var(--cond);font-size:28px;font-weight:700;color:var(--gold-hi)}
+.sum .l{font-size:11px;color:var(--dim);letter-spacing:.14em;font-family:var(--cond)}
+</style>
+</head>
+<body>
+<header>
+  <h1>SCRIMZONE MATCH HISTORY</h1>
+  <span class="sp"></span>
+  <a href="./controller.html"><button>Controller</button></a>
+</header>
+
+<div class="wrap">
+  <div class="filter">
+    <label for="team">Team</label>
+    <select id="team"><option value="">All matches</option></select>
+    <span id="count" style="color:var(--dim);font-size:13px"></span>
+  </div>
+  <div id="sum"></div>
+  <div id="list"><div class="empty">Loading match history…</div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBRcMrsrifvY-VDsTRCrTMKZuib30a7wEs",
+  authDomain: "tournment-leaderboard.firebaseapp.com",
+  databaseURL: "https://tournment-leaderboard-default-rtdb.firebaseio.com",
+  projectId: "tournment-leaderboard",
+  storageBucket: "tournment-leaderboard.firebasestorage.app",
+  messagingSenderId: "685244342962",
+  appId: "1:685244342962:web:d31c15a67fb9b6161f5fab",
+  measurementId: "G-RKSK1ZBC5M"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?"":s).replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
+const ordinal = n => { const s=["th","st","nd","rd"],v=n%100; return s[(v-20)%10]||s[v]||s[0]; };
+function fmtDate(d){ if(!d) return "Date not recorded"; const x=new Date(d+"T00:00:00");
+  return isNaN(x)?d:x.toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}); }
+
+let matches = [];   // newest first
+
+db.ref("scrimzone/history").limitToLast(120).on("value", snap => {
+  const v = snap.val() || {};
+  matches = Object.entries(v).map(([id,m]) => Object.assign({id}, m));
+  matches.sort((a,b) => (b.savedAt||0) - (a.savedAt||0) || (b.matchNumber||0) - (a.matchNumber||0));
+  buildTeamFilter();
+  render();
+}, e => { $("list").innerHTML = '<div class="empty">Could not load history — ' + esc(e.message) + '</div>'; });
+
+function buildTeamFilter(){
+  const sel = $("team"), cur = sel.value;
+  const seen = new Map();
+  matches.forEach(m => (m.results||[]).forEach(r => { if(!seen.has(r.teamId)) seen.set(r.teamId, r.name || r.teamId); }));
+  sel.innerHTML = '<option value="">All matches</option>';
+  [...seen.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1])))
+    .forEach(([id,name]) => { const o=document.createElement("option"); o.value=id; o.textContent=name; sel.append(o); });
+  sel.value = cur;
+}
+$("team").onchange = render;
+
+function render(){
+  const filter = $("team").value;
+  const list = filter ? matches.filter(m => (m.results||[]).some(r => r.teamId === filter)) : matches;
+  $("count").textContent = list.length ? list.length + (list.length===1?" match":" matches") : "";
+
+  if(!matches.length){
+    $("sum").innerHTML = "";
+    $("list").innerHTML = '<div class="empty">No completed matches yet. Save a match in the controller and it will appear here.</div>';
+    return;
+  }
+  if(!list.length){
+    $("sum").innerHTML = "";
+    $("list").innerHTML = '<div class="empty">No matches recorded for this team.</div>';
+    return;
+  }
+
+  /* per-team summary */
+  if(filter){
+    let pts=0, booyah=0, best=99;
+    list.forEach(m => { const r=(m.results||[]).find(x=>x.teamId===filter); if(!r) return;
+      pts += r.points||0; if(m.booyah===filter) booyah++; best=Math.min(best,r.placement||99); });
+    $("sum").innerHTML =
+      '<div class="sum"><div><div class="n">'+list.length+'</div><div class="l">MATCHES</div></div>' +
+      '<div><div class="n">'+booyah+'</div><div class="l">BOOYAH</div></div>' +
+      '<div><div class="n">'+pts+'</div><div class="l">POINTS</div></div></div>';
+  } else $("sum").innerHTML = "";
+
+  $("list").innerHTML = list.map(m => {
+    const rows = (m.results||[]).slice().sort((a,b)=>a.placement-b.placement).map(r =>
+      '<div class="r'+(r.placement===1?' top1':'')+(filter&&r.teamId===filter?' top1':'')+'">' +
+      '<div class="p">'+esc(r.placement)+ordinal(r.placement)+'</div>' +
+      '<div class="n">'+esc(r.name||r.teamId)+'</div>' +
+      '<div class="pts">'+esc(r.points)+'</div></div>').join("");
+    return '<article class="match">' +
+      '<div class="top"><span class="no">MATCH #'+esc(m.matchNumber ?? "—")+'</span>' +
+      '<span class="meta">'+esc(fmtDate(m.date))+(m.time?' · '+esc(m.time):'')+'</span>' +
+      '<span class="map">'+esc((m.map||"Map not recorded").toUpperCase())+'</span></div>' +
+      (m.booyah ? '<div class="booyah"><span class="l">BOOYAH</span><span class="v">' +
+        esc(m.booyahName || m.booyah) + '</span></div>' : '') +
+      '<div class="rows">'+ (rows || '<div class="r"><div class="n">No placements recorded</div></div>') +'</div>' +
+      '</article>';
+  }).join("");
+}
+</script>
+</body>
+</html>
