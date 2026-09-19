@@ -32,8 +32,7 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
 #stage{position:absolute;top:0;left:0;transform-origin:top left;padding:0}
 
 /* ============ MATCH HEADER ============ */
-.hdr-wrap{position:relative;width:max-content;display:inline-block;min-width:0}
-/* gold light streaks behind the top-left corner */
+.hdr-wrap{position:relative;width:max-content;display:block;min-width:0;margin-bottom:8px;}
 .streaks{position:absolute;left:-6px;top:-16px;width:180px;height:28px;pointer-events:none;opacity:.85}
 .streaks i{position:absolute;top:0;height:30px;width:13px;transform:skewX(-24deg);
   background:linear-gradient(180deg,rgba(255,224,138,.95),rgba(217,167,44,.15))}
@@ -86,16 +85,6 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
 .thead .lbl.win{
   background:linear-gradient(180deg,#36c4ed,#069dcc 52%,#0876a5)}
 .thead .lbl.win{box-shadow:inset 1px 0 0 rgba(255,255,255,.32)}
-.thead .lbl:hover{filter:brightness(1.08)}
-.thead .lbl.active{box-shadow:inset 0 -3px 0 #fff;color:#fff}
-.thead .lbl:focus{outline:none}
-.thead .lbl.team.active{box-shadow:inset 0 -3px 0 var(--gold-hi)}
-.clock-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);
-  width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.55);
-  background:rgba(6,16,28,.35);color:#fff;cursor:pointer;z-index:3;display:flex;
-  align-items:center;justify-content:center;padding:0}
-.clock-btn svg{width:14px;height:14px;display:block}
-.clock-btn.on{background:rgba(255,255,255,.18);border-color:#fff}
 
 .row{display:grid;grid-template-columns:1fr 76px;align-items:stretch;height:46px;
   border-bottom:1px solid rgba(20,126,161,.68);position:relative;overflow:hidden}
@@ -122,7 +111,6 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
 @keyframes booyahSweep{0%{left:-34%;opacity:0;filter:brightness(1)}
   12%{opacity:1}65%{left:42%;opacity:1;filter:brightness(1.25)}
   100%{left:112%;opacity:0;filter:brightness(1)}}
-@keyframes rowIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes rowSheen{0%{transform:translateX(-120%)}45%,100%{transform:translateX(120%)}}
 .row:last-child{border-bottom:0}
 .row .cell{display:flex;align-items:center;justify-content:center;
@@ -131,7 +119,6 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
 .row .cell.win{gap:6px}
 .cup{font-size:25px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
 
-/* textured navy panels, alternating like the broadcast reference */
 .row{background:
   linear-gradient(90deg,rgba(255,210,76,.16),rgba(8,18,31,.34) 15%,rgba(8,18,31,.22) 82%,rgba(44,150,224,.24)),
   linear-gradient(118deg,rgba(43,144,232,.26) 0%,rgba(43,144,232,.08) 42%),
@@ -145,12 +132,12 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
   linear-gradient(282deg,rgba(43,144,232,.22) 0%,rgba(43,144,232,.03) 32%),
   linear-gradient(180deg,rgba(26,43,62,.78) 0%,rgba(14,24,38,.72) 58%,rgba(10,19,32,.72) 100%)}
 
-.tm{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 6px;min-width:0}
+.tm{position:relative;z-index:1;display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:0 6px 0 54px;min-width:0;width:100%}
 .logo{width:42px;height:42px;flex:0 0 42px;object-fit:contain;
   background:rgba(255,255,255,.03);position:absolute;left:6px}
 .logo-ph{display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
   color:#8ea0b8;letter-spacing:.03em;border:1px solid rgba(255,255,255,.08)}
-.tname{width:100%;flex:none;text-align:center;font-family:var(--cond);font-weight:600;font-size:24px;
+.tname{width:100%;text-align:left;font-family:var(--cond);font-weight:600;font-size:24px;
   letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   text-shadow:0 2px 4px rgba(0,0,0,.8);position:relative;z-index:1}
 
@@ -170,7 +157,7 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
 <body>
 <div id="stage">
 
-  <div class="hdr-wrap">
+  <div class="hdr-wrap" id="hdrWrap">
     <div class="streaks"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="hdr">
       <div class="hdr-in">
@@ -186,7 +173,7 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
     </div>
   </div>
 
-  <div class="tbl hide" id="tbl">
+  <div class="tbl" id="tbl">
     <div class="mapbar" id="mapBar">MAP NOT SET</div>
     <div class="thead">
       <div class="lbl team" id="sortTeam" data-sort="team">TEAM</div>
@@ -201,9 +188,6 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
-/* ============================================================
-   SCRIMZONE OVERLAY — read only except sort / header toggles
-   ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyBRcMrsrifvY-VDsTRCrTMKZuib30a7wEs",
   authDomain: "tournment-leaderboard.firebaseapp.com",
@@ -215,14 +199,14 @@ const firebaseConfig = {
   measurementId: "G-RKSK1ZBC5M"
 };
 const P = { config:"scrimzone/config", live:"scrimzone/live", timer:"scrimzone/timer",
-            logos:"scrimzone/logos", wins:"scrimzone/wins", teams:"scrimzone/teams" };
+          logos:"scrimzone/logos", wins:"scrimzone/wins", teams:"scrimzone/teams" };
 
 const qs = new URLSearchParams(location.search);
 const scale = parseFloat(qs.get("scale") || "1");
 if (scale && scale !== 1) document.getElementById("stage").style.transform = "scale(" + scale + ")";
 
 const el = id => document.getElementById(id);
-const statusEl = el("status"), tblEl = el("tbl"), rowsEl = el("rows");
+const statusEl = el("status"), tblEl = el("tbl"), rowsEl = el("rows"), hdrWrapEl = el("hdrWrap");
 function setStatus(m){ if(m){ statusEl.textContent=m; statusEl.classList.remove("hide"); }
                        else statusEl.classList.add("hide"); }
 
@@ -312,23 +296,7 @@ function paintSort(){
     const b = el(id);
     if(b) b.classList.toggle("active", b.dataset.sort === sortBy);
   }
-  const clock = el("clockBtn");
-  if(clock) clock.classList.toggle("on", showHeader);
-  const hdr = document.querySelector(".hdr-wrap");
-  if(hdr) hdr.classList.toggle("hide", !showHeader);
-}
-
-function setSort(next){
-  if(next !== "team" && next !== "win") return;
-  sortBy = next;
-  paintSort();
-  render();
-  db.ref(P.live).update({ sortBy: next }).catch(()=>{});
-}
-function setShowHeader(next){
-  showHeader = !!next;
-  paintSort();
-  db.ref(P.live).update({ showHeader }).catch(()=>{});
+  if(hdrWrapEl) hdrWrapEl.classList.toggle("hide", !showHeader);
 }
 
 function mapLabel(){
@@ -342,37 +310,33 @@ function render(){
   const label = mapLabel();
   const bar = el("mapBar");
   if(bar) bar.textContent = label;
-  const hasTeams = live && Array.isArray(live.teamIds) && live.teamIds.length;
-  const shown = true;
-  if(!shown){
-    el("hTitle").textContent="CURRENT MATCH"; el("hSub").textContent = live && live.map ? mapLabel() : "\u00a0";
-    tblEl.classList.add("hide");
-    setStatus(live===null ? "Waiting for broadcast data…" : "No active match");
-    return;
-  }
-  const num = (live.matchNumber!=null && live.matchNumber!=="") ? " #"+live.matchNumber : "";
+
+  const num = (live && live.matchNumber!=null && live.matchNumber!=="") ? " #"+live.matchNumber : "";
   el("hTitle").textContent = "CURRENT MATCH"+num;
   el("hSub").textContent = label;
 
-  const ids = Array.isArray(live.slotIds) ? live.slotIds.filter(Boolean) :
-    (Array.isArray(live.teamIds) ? live.teamIds.slice() : []);
+  const ids = live && Array.isArray(live.slotIds) ? live.slotIds.filter(Boolean) :
+    (live && Array.isArray(live.teamIds) ? live.teamIds.slice() : []);
+
   const rows = ids.map(id => ({
     id, name: displayName(id, teams[id], logos[id]),
     logo: (logos[id] && logos[id].url) || teamLogo(teams[id]),
     win: (Number(wins[id]) || 0) + (Number((live.booyahCounts || {})[id]) || 0)
   }));
+
   rows.sort((a,b)=>{
     if(sortBy === "team") return a.name.localeCompare(b.name);
     return (b.win-a.win) || a.name.localeCompare(b.name);
-  });
+  }));
 
   rowsEl.innerHTML="";
-  const pulseAge=live.booyahPulse == null ? Infinity : Date.now()-Number(live.booyahPulse);
-  const pulseNew=live.booyahPulse != null && live.booyahPulse !== previousBooyahPulse &&
+  const pulseAge=live && live.booyahPulse == null ? Infinity : Date.now()-Number(live.booyahPulse);
+  const pulseNew=live && live.booyahPulse != null && live.booyahPulse !== previousBooyahPulse &&
     (hasRendered || (pulseAge >= 0 && pulseAge < 2500));
+
   rows.forEach((r,i)=>{
     const div=document.createElement("div");
-    const booyahCount=Number((live.booyahCounts||{})[r.id])||0;
+    const booyahCount=Number(((live && live.booyahCounts)||{})[r.id])||0;
     const booyahNew=(previousBooyahs[r.id] !== undefined && booyahCount > previousBooyahs[r.id]) ||
       (pulseNew && live.booyah === r.id && booyahCount > 0);
     div.className = "row" + (i===0 && r.win ? " lead" : "");
@@ -394,7 +358,8 @@ function render(){
     div.append(tm,win); rowsEl.append(div);
     previousBooyahs[r.id]=booyahCount;
   });
-  if(live.booyahPulse != null) previousBooyahPulse=live.booyahPulse;
+
+  if(live && live.booyahPulse != null) previousBooyahPulse=live.booyahPulse;
   hasRendered=true;
 
   tblEl.classList.remove("hide");
@@ -402,7 +367,7 @@ function render(){
 }
 
 render();
-setTimeout(()=>{ if(live===null && !failed) setStatus("Waiting for broadcast data…"); }, 8000);
+setTimeout(()=>{ if(!live && !failed) setStatus("Waiting for broadcast data…"); }, 8000);
 </script>
 </body>
 </html>
