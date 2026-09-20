@@ -198,20 +198,23 @@ const firebaseConfig = {
   appId: "1:685244342962:web:d31c15a67fb9b6161f5fab",
   measurementId: "G-RKSK1ZBC5M"
 };
-const P = { config:"scrimzone/config", live:"scrimzone/live", timer:"scrimzone/timer",
-          logos:"scrimzone/logos", wins:"scrimzone/wins", teams:"scrimzone/teams" };
 
 const qs = new URLSearchParams(location.search);
 const scale = parseFloat(qs.get("scale") || "1");
 if (scale && scale !== 1) document.getElementById("stage").style.transform = "scale(" + scale + ")";
 
 const el = id => document.getElementById(id);
-const statusEl = el("status"), tblEl = el("tbl"), rowsEl = el("rows"), hdrWrapEl = el("hdrWrap");
-function setStatus(m){ if(m){ statusEl.textContent=m; statusEl.classList.remove("hide"); }
-                       else statusEl.classList.add("hide"); }
+const statusEl = el("status"), tblEl = el("tbl"), rowsEl = el("rows"), hdrWrapEl = el("hdrWrap"), stageEl = el("stage");
 
-if (typeof firebase === "undefined"){ setStatus("Broadcast connection unavailable");
-  throw new Error("Firebase SDK failed to load"); }
+function setStatus(m){ 
+  if(m){ statusEl.textContent=m; statusEl.classList.remove("hide"); }
+  else statusEl.classList.add("hide"); 
+}
+
+if (typeof firebase === "undefined"){ 
+  setStatus("Broadcast connection unavailable");
+  throw new Error("Firebase SDK failed to load"); 
+}
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -221,61 +224,43 @@ const pick = (o,ks)=>{ if(!o||typeof o!=="object") return null;
 const teamName  = t => pick(t,["name","teamName","team_name","team","title","tag"]);
 const teamShort = t => pick(t,["short","shortName","short_name","tag","abbr","abbreviation","code"]);
 const teamLogo  = t => pick(t,["logo","logoUrl","logo_url","image","icon","avatar"]);
-const displayName = (id,t,l) => teamName(t) || teamShort(t) || (l && l.short) || id;
+const displayName = (id,t,l,o) => teamName(o) || teamName(t) || teamShort(t) || (l && l.short) || id;
 
 function fmtClock(sec){ sec=Math.max(0,Math.floor(sec));
   const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60,p=n=>String(n).padStart(2,"0");
   return h ? h+":"+p(m)+":"+p(s) : p(m)+":"+p(s); }
 
-let cfg={}, live={}, timer={running:false,base:0,startedAt:0}, offset=0, failed=false;
-const teams={}, logos={}, wins={}, teamListeners={}, customTeams={};
+let live={}, timer={running:false,base:0,startedAt:0}, offset=0;
+let teams={}, logos={}, wins={}, overrides={};
 let previousBooyahs={}, previousBooyahPulse=null, hasRendered=false;
 let sortBy="win", showHeader=true;
 
 db.ref(".info/serverTimeOffset").on("value", s => offset = s.val() || 0);
-db.ref(".info/connected").on("value", s => { if(s.val()===false && !live) setStatus("Broadcast connection unavailable"); });
-const onErr = () => { failed=true; setStatus("Broadcast connection unavailable"); };
-const onSoft = () => {};
 
-db.ref(P.config).on("value", s => { cfg = s.val() || {}; bindTeams(); render(); }, onErr);
-db.ref(P.live).on("value",   s => {
-  live = s.val();
-  if(live && typeof live === "object"){
-    if(live.sortBy === "team" || live.sortBy === "win") sortBy = live.sortBy;
-    if(typeof live.showHeader === "boolean") showHeader = live.showHeader;
-  }
-  bindTeams(); render();
-}, onErr);
-db.ref(P.timer).on("value",  s => { timer = s.val() || {running:false,base:0,startedAt:0}; tickClock(); }, onErr);
-db.ref(P.teams).on("value", s => {
-  Object.keys(customTeams).forEach(id => delete customTeams[id]);
-  Object.assign(customTeams, s.val() || {});
-  Object.keys(customTeams).forEach(id => { teams[id] = customTeams[id]; });
-  bindTeams(); render();
-}, onSoft);
+db.ref("scrimzone/timer").on("value", s => { 
+  timer = s.val() || {running:false,base:0,startedAt:0}; 
+  tickClock(); 
+});
 
-function bindTeams(){
-  const ids = (live && Array.isArray(live.slotIds)) ? live.slotIds.filter(Boolean) :
-    ((live && Array.isArray(live.teamIds)) ? live.teamIds : []);
-  const want = new Set(ids);
-  for(const id of Object.keys(teamListeners)){
-    if(!want.has(id)){
-      const L = teamListeners[id];
-      if(L.team) L.team.off("value",L.teamCb); L.logo.off("value",L.logoCb); L.win.off("value",L.winCb);
-      delete teamListeners[id]; delete teams[id]; delete logos[id]; delete wins[id];
-    }
+db.ref("scrimzone").on("value", snap => {
+  const data = snap.val();
+  if(!data){
+    live = {}; wins = {}; teams = {}; overrides = {}; logos = {};
+    stageEl.classList.add("hide");
+    return;
   }
-  for(const id of ids){
-    if(teamListeners[id]) continue;
-    const tRef=cfg.teamsPath ? db.ref(cfg.teamsPath+"/"+id) : null;
-    const lRef=db.ref(P.logos+"/"+id), wRef=db.ref(P.wins+"/"+id);
-    if(customTeams[id]) teams[id]=customTeams[id];
-    const teamCb=tRef ? tRef.on("value",s=>{teams[id]=customTeams[id]||s.val();render();},onSoft) : null;
-    const logoCb=lRef.on("value",s=>{logos[id]=s.val();render();},onSoft);
-    const winCb =wRef.on("value",s=>{wins[id]=s.val()||0;render();},onSoft);
-    teamListeners[id]={team:tRef,logo:lRef,win:wRef,teamCb,logoCb,winCb};
-  }
-}
+  
+  live = data.live || {};
+  wins = data.wins || {};
+  teams = data.teams || {};
+  overrides = data.teamOverrides || {};
+  logos = data.logos || {};
+
+  if(live.sortBy === "team" || live.sortBy === "win") sortBy = live.sortBy;
+  showHeader = live.showHeader !== false;
+
+  render();
+});
 
 function elapsed(){
   const base=Number(timer.base)||0;
@@ -300,74 +285,92 @@ function paintSort(){
 }
 
 function mapLabel(){
+  const mapStr = live && live.map ? String(live.map).toUpperCase() : "";
+  if (!mapStr) return "MAP NOT SET";
   const idx = (live && live.mapIndex!=null && live.mapIndex!=="") ? live.mapIndex : 1;
-  return (live && live.map) ? ("MAP - "+idx+" - "+String(live.map).toUpperCase()) : "MAP NOT SET";
+  return "MAP - " + idx + " - " + mapStr;
 }
 
 function render(){
-  if(failed) return;
+  // Control overall visibility driven by controller toggle or empty state
+  if (live.visible === false || !Array.isArray(live.teamIds) || live.teamIds.length === 0) {
+    stageEl.classList.add("hide");
+    return;
+  }
+  stageEl.classList.remove("hide");
+
   paintSort();
   const label = mapLabel();
   const bar = el("mapBar");
   if(bar) bar.textContent = label;
 
-  const num = (live && live.matchNumber!=null && live.matchNumber!=="") ? " #"+live.matchNumber : "";
-  el("hTitle").textContent = "CURRENT MATCH"+num;
+  const num = (live && live.matchNumber!=null && live.matchNumber!=="") ? " #" + live.matchNumber : "";
+  el("hTitle").textContent = "CURRENT MATCH" + num;
   el("hSub").textContent = label;
 
-  const ids = live && Array.isArray(live.slotIds) ? live.slotIds.filter(Boolean) :
-    (live && Array.isArray(live.teamIds) ? live.teamIds.slice() : []);
+  const ids = Array.isArray(live.slotIds) && live.slotIds.filter(Boolean).length > 0 
+    ? live.slotIds.filter(Boolean) 
+    : live.teamIds.slice();
 
   const rows = ids.map(id => ({
-    id, name: displayName(id, teams[id], logos[id]),
+    id, 
+    name: displayName(id, teams[id], logos[id], overrides[id]),
     logo: (logos[id] && logos[id].url) || teamLogo(teams[id]),
     win: (Number(wins[id]) || 0) + (Number((live.booyahCounts || {})[id]) || 0)
   }));
 
   rows.sort((a,b)=>{
     if(sortBy === "team") return a.name.localeCompare(b.name);
-    return (b.win-a.win) || a.name.localeCompare(b.name);
+    return (b.win - a.win) || a.name.localeCompare(b.name);
   });
 
-  rowsEl.innerHTML="";
-  const pulseAge=live && live.booyahPulse == null ? Infinity : Date.now()-Number(live.booyahPulse);
-  const pulseNew=live && live.booyahPulse != null && live.booyahPulse !== previousBooyahPulse &&
+  rowsEl.innerHTML = "";
+  const pulseAge = live.booyahPulse == null ? Infinity : Date.now() - Number(live.booyahPulse);
+  const pulseNew = live.booyahPulse != null && live.booyahPulse !== previousBooyahPulse &&
     (hasRendered || (pulseAge >= 0 && pulseAge < 2500));
 
   rows.forEach((r,i)=>{
-    const div=document.createElement("div");
-    const booyahCount=Number(((live && live.booyahCounts)||{})[r.id])||0;
-    const booyahNew=(previousBooyahs[r.id] !== undefined && booyahCount > previousBooyahs[r.id]) ||
+    const div = document.createElement("div");
+    const booyahCount = Number((live.booyahCounts || {})[r.id]) || 0;
+    const booyahNew = (previousBooyahs[r.id] !== undefined && booyahCount > previousBooyahs[r.id]) ||
       (pulseNew && live.booyah === r.id && booyahCount > 0);
-    div.className = "row" + (i===0 && r.win ? " lead" : "");
+    
+    div.className = "row" + (i === 0 && r.win ? " lead" : "");
 
-    const tm=document.createElement("div"); tm.className="tm";
+    const tm = document.createElement("div"); tm.className = "tm";
     if(r.logo){
-      const img=document.createElement("img"); img.className="logo"; img.src=r.logo; img.alt="";
-      img.onerror=()=>img.replaceWith(placeholder(r.name));
+      const img = document.createElement("img"); img.className = "logo"; img.src = r.logo; img.alt = "";
+      img.onerror = () => img.replaceWith(placeholder(r.name));
       tm.append(img);
     } else tm.append(placeholder(r.name));
-    const nm=document.createElement("div"); nm.className="tname"; nm.textContent=r.name; tm.append(nm);
 
-    const win=document.createElement("div"); win.className="cell win";
+    const nm = document.createElement("div"); nm.className = "tname"; nm.textContent = r.name; tm.append(nm);
+
+    const win = document.createElement("div"); win.className = "cell win";
     win.innerHTML = r.win > 0
-      ? "<span>"+r.win+"</span><span class='cup'>🏆</span>"
-      : "<span>"+r.win+"</span>";
+      ? "<span>" + r.win + "</span><span class='cup'>🏆</span>"
+      : "<span>" + r.win + "</span>";
 
-    if(booyahNew){ const pop=document.createElement("div"); pop.className="booyah-pop"; pop.textContent="BOOYAH!"; div.append(pop); }
-    div.append(tm,win); rowsEl.append(div);
-    previousBooyahs[r.id]=booyahCount;
+    if(booyahNew){ 
+      const pop = document.createElement("div"); 
+      pop.className = "booyah-pop"; 
+      pop.textContent = "BOOYAH!"; 
+      div.append(pop); 
+    }
+
+    div.append(tm, win); 
+    rowsEl.append(div);
+    previousBooyahs[r.id] = booyahCount;
   });
 
-  if(live && live.booyahPulse != null) previousBooyahPulse=live.booyahPulse;
-  hasRendered=true;
+  if(live.booyahPulse != null) previousBooyahPulse = live.booyahPulse;
+  hasRendered = true;
 
   tblEl.classList.remove("hide");
   setStatus(null);
 }
 
 render();
-setTimeout(()=>{ if(!live && !failed) setStatus("Waiting for broadcast data…"); }, 8000);
 </script>
 </body>
 </html>
