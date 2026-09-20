@@ -27,9 +27,9 @@
   --disp:"Saira","Arial Narrow",system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:transparent!important;overflow:hidden;width:100%;height:100%}
-body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased}
-#stage{position:absolute;top:0;left:0;transform-origin:top left;padding:0}
+html,body{background:#0d1522!important;overflow:hidden;width:100%;height:100%}
+body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased;padding:20px}
+#stage{position:absolute;top:20px;left:20px;transform-origin:top left}
 
 /* ============ MATCH HEADER ============ */
 .hdr-wrap{position:relative;width:max-content;display:block;min-width:0;margin-bottom:8px;}
@@ -146,11 +146,7 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
   color:#eef4fb;background:linear-gradient(180deg,#101c2c,#0a1422);
   border-bottom:1px solid rgba(47,134,216,.45);text-shadow:0 1px 2px rgba(0,0,0,.7)}
 
-/* ============ STATUS ============ */
-.status{width:360px;margin-top:16px;padding:10px 14px;font-size:12px;letter-spacing:.11em;
-  color:var(--ink-dim);background:rgba(6,12,22,.85);border-left:3px solid var(--gold);
-  box-shadow:0 8px 24px rgba(0,0,0,.6)}
-.status{display:none}
+.empty-msg{padding:16px;text-align:center;color:var(--ink-dim);font-size:14px}
 .hide{display:none!important}
 </style>
 </head>
@@ -162,8 +158,8 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
     <div class="hdr">
       <div class="hdr-in">
         <div class="hdr-main">
-          <div class="hdr-title" id="hTitle">CURRENT MATCH</div>
-          <div class="hdr-sub" id="hSub">&nbsp;</div>
+          <div class="hdr-title" id="hTitle">CURRENT MATCH #1</div>
+          <div class="hdr-sub" id="hSub">MAP NOT SET</div>
         </div>
         <div class="hdr-time">
           <div class="t-label">MATCH TIME</div>
@@ -176,13 +172,14 @@ body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased
   <div class="tbl" id="tbl">
     <div class="mapbar" id="mapBar">MAP NOT SET</div>
     <div class="thead">
-      <div class="lbl team" id="sortTeam" data-sort="team">TEAM</div>
-      <div class="lbl win" id="sortWin" data-sort="win">WIN</div>
+      <div class="lbl team" id="sortTeam">TEAM</div>
+      <div class="lbl win" id="sortWin">WIN</div>
     </div>
-    <div id="rows"></div>
+    <div id="rows">
+      <div class="empty-msg">Waiting for team data…</div>
+    </div>
   </div>
 
-  <div class="status" id="status">Waiting for broadcast data…</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -204,173 +201,159 @@ const scale = parseFloat(qs.get("scale") || "1");
 if (scale && scale !== 1) document.getElementById("stage").style.transform = "scale(" + scale + ")";
 
 const el = id => document.getElementById(id);
-const statusEl = el("status"), tblEl = el("tbl"), rowsEl = el("rows"), hdrWrapEl = el("hdrWrap"), stageEl = el("stage");
+const tblEl = el("tbl"), rowsEl = el("rows"), hdrWrapEl = el("hdrWrap"), stageEl = el("stage");
 
-function setStatus(m){ 
-  if(m){ statusEl.textContent=m; statusEl.classList.remove("hide"); }
-  else statusEl.classList.add("hide"); 
-}
+if (typeof firebase !== "undefined") {
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-if (typeof firebase === "undefined"){ 
-  setStatus("Broadcast connection unavailable");
-  throw new Error("Firebase SDK failed to load"); 
-}
+  const pick = (o,ks)=>{ if(!o||typeof o!=="object") return null;
+    for(const k of ks){const v=o[k]; if(v!==undefined&&v!==null&&v!=="") return v;} return null; };
+  const teamName  = t => pick(t,["name","teamName","team_name","team","title","tag"]);
+  const teamShort = t => pick(t,["short","shortName","short_name","tag","abbr","abbreviation","code"]);
+  const teamLogo  = t => pick(t,["logo","logoUrl","logo_url","image","icon","avatar"]);
+  const displayName = (id,t,l,o) => teamName(o) || teamName(t) || teamShort(t) || (l && l.short) || id;
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+  function fmtClock(sec){ sec=Math.max(0,Math.floor(sec));
+    const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60,p=n=>String(n).padStart(2,"0");
+    return h ? h+":"+p(m)+":"+p(s) : p(m)+":"+p(s); }
 
-const pick = (o,ks)=>{ if(!o||typeof o!=="object") return null;
-  for(const k of ks){const v=o[k]; if(v!==undefined&&v!==null&&v!=="") return v;} return null; };
-const teamName  = t => pick(t,["name","teamName","team_name","team","title","tag"]);
-const teamShort = t => pick(t,["short","shortName","short_name","tag","abbr","abbreviation","code"]);
-const teamLogo  = t => pick(t,["logo","logoUrl","logo_url","image","icon","avatar"]);
-const displayName = (id,t,l,o) => teamName(o) || teamName(t) || teamShort(t) || (l && l.short) || id;
+  let live={}, timer={running:false,base:0,startedAt:0}, offset=0;
+  let teams={}, logos={}, wins={}, overrides={};
+  let previousBooyahs={}, previousBooyahPulse=null, hasRendered=false;
+  let sortBy="win", showHeader=true;
 
-function fmtClock(sec){ sec=Math.max(0,Math.floor(sec));
-  const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60,p=n=>String(n).padStart(2,"0");
-  return h ? h+":"+p(m)+":"+p(s) : p(m)+":"+p(s); }
+  db.ref(".info/serverTimeOffset").on("value", s => offset = s.val() || 0);
 
-let live={}, timer={running:false,base:0,startedAt:0}, offset=0;
-let teams={}, logos={}, wins={}, overrides={};
-let previousBooyahs={}, previousBooyahPulse=null, hasRendered=false;
-let sortBy="win", showHeader=true;
-
-db.ref(".info/serverTimeOffset").on("value", s => offset = s.val() || 0);
-
-db.ref("scrimzone/timer").on("value", s => { 
-  timer = s.val() || {running:false,base:0,startedAt:0}; 
-  tickClock(); 
-});
-
-db.ref("scrimzone").on("value", snap => {
-  const data = snap.val();
-  if(!data){
-    live = {}; wins = {}; teams = {}; overrides = {}; logos = {};
-    stageEl.classList.add("hide");
-    return;
-  }
-  
-  live = data.live || {};
-  wins = data.wins || {};
-  teams = data.teams || {};
-  overrides = data.teamOverrides || {};
-  logos = data.logos || {};
-
-  if(live.sortBy === "team" || live.sortBy === "win") sortBy = live.sortBy;
-  showHeader = live.showHeader !== false;
-
-  render();
-});
-
-function elapsed(){
-  const base=Number(timer.base)||0;
-  if(!timer.running || !timer.startedAt) return base;
-  return base + (Date.now()+offset-Number(timer.startedAt))/1000;
-}
-function tickClock(){ el("hClock").textContent = fmtClock(elapsed()); }
-setInterval(tickClock, 250);
-
-function placeholder(name){
-  const d=document.createElement("div"); d.className="logo logo-ph";
-  d.textContent=String(name||"?").replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()||"?";
-  return d;
-}
-
-function paintSort(){
-  for(const id of ["sortTeam","sortWin"]){
-    const b = el(id);
-    if(b) b.classList.toggle("active", b.dataset.sort === sortBy);
-  }
-  if(hdrWrapEl) hdrWrapEl.classList.toggle("hide", !showHeader);
-}
-
-function mapLabel(){
-  const mapStr = live && live.map ? String(live.map).toUpperCase() : "";
-  if (!mapStr) return "MAP NOT SET";
-  const idx = (live && live.mapIndex!=null && live.mapIndex!=="") ? live.mapIndex : 1;
-  return "MAP - " + idx + " - " + mapStr;
-}
-
-function render(){
-  // Control overall visibility driven by controller toggle or empty state
-  if (live.visible === false || !Array.isArray(live.teamIds) || live.teamIds.length === 0) {
-    stageEl.classList.add("hide");
-    return;
-  }
-  stageEl.classList.remove("hide");
-
-  paintSort();
-  const label = mapLabel();
-  const bar = el("mapBar");
-  if(bar) bar.textContent = label;
-
-  const num = (live && live.matchNumber!=null && live.matchNumber!=="") ? " #" + live.matchNumber : "";
-  el("hTitle").textContent = "CURRENT MATCH" + num;
-  el("hSub").textContent = label;
-
-  const ids = Array.isArray(live.slotIds) && live.slotIds.filter(Boolean).length > 0 
-    ? live.slotIds.filter(Boolean) 
-    : live.teamIds.slice();
-
-  const rows = ids.map(id => ({
-    id, 
-    name: displayName(id, teams[id], logos[id], overrides[id]),
-    logo: (logos[id] && logos[id].url) || teamLogo(teams[id]),
-    win: (Number(wins[id]) || 0) + (Number((live.booyahCounts || {})[id]) || 0)
-  }));
-
-  rows.sort((a,b)=>{
-    if(sortBy === "team") return a.name.localeCompare(b.name);
-    return (b.win - a.win) || a.name.localeCompare(b.name);
+  db.ref("scrimzone/timer").on("value", s => { 
+    timer = s.val() || {running:false,base:0,startedAt:0}; 
+    tickClock(); 
   });
 
-  rowsEl.innerHTML = "";
-  const pulseAge = live.booyahPulse == null ? Infinity : Date.now() - Number(live.booyahPulse);
-  const pulseNew = live.booyahPulse != null && live.booyahPulse !== previousBooyahPulse &&
-    (hasRendered || (pulseAge >= 0 && pulseAge < 2500));
-
-  rows.forEach((r,i)=>{
-    const div = document.createElement("div");
-    const booyahCount = Number((live.booyahCounts || {})[r.id]) || 0;
-    const booyahNew = (previousBooyahs[r.id] !== undefined && booyahCount > previousBooyahs[r.id]) ||
-      (pulseNew && live.booyah === r.id && booyahCount > 0);
+  db.ref("scrimzone").on("value", snap => {
+    const data = snap.val();
+    if(!data){
+      live = {}; wins = {}; teams = {}; overrides = {}; logos = {};
+      render();
+      return;
+    }
     
-    div.className = "row" + (i === 0 && r.win ? " lead" : "");
+    live = data.live || {};
+    wins = data.wins || {};
+    teams = data.teams || {};
+    overrides = data.teamOverrides || {};
+    logos = data.logos || {};
 
-    const tm = document.createElement("div"); tm.className = "tm";
-    if(r.logo){
-      const img = document.createElement("img"); img.className = "logo"; img.src = r.logo; img.alt = "";
-      img.onerror = () => img.replaceWith(placeholder(r.name));
-      tm.append(img);
-    } else tm.append(placeholder(r.name));
+    if(live.sortBy === "team" || live.sortBy === "win") sortBy = live.sortBy;
+    showHeader = live.showHeader !== false;
 
-    const nm = document.createElement("div"); nm.className = "tname"; nm.textContent = r.name; tm.append(nm);
+    render();
+  });
 
-    const win = document.createElement("div"); win.className = "cell win";
-    win.innerHTML = r.win > 0
-      ? "<span>" + r.win + "</span><span class='cup'>🏆</span>"
-      : "<span>" + r.win + "</span>";
+  function elapsed(){
+    const base=Number(timer.base)||0;
+    if(!timer.running || !timer.startedAt) return base;
+    return base + (Date.now()+offset-Number(timer.startedAt))/1000;
+  }
+  function tickClock(){ el("hClock").textContent = fmtClock(elapsed()); }
+  setInterval(tickClock, 250);
 
-    if(booyahNew){ 
-      const pop = document.createElement("div"); 
-      pop.className = "booyah-pop"; 
-      pop.textContent = "BOOYAH!"; 
-      div.append(pop); 
+  function placeholder(name){
+    const d=document.createElement("div"); d.className="logo logo-ph";
+    d.textContent=String(name||"?").replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()||"?";
+    return d;
+  }
+
+  function mapLabel(){
+    const mapStr = live && live.map ? String(live.map).toUpperCase() : "";
+    if (!mapStr) return "MAP NOT SET";
+    const idx = (live && live.mapIndex!=null && live.mapIndex!=="") ? live.mapIndex : 1;
+    return "MAP - " + idx + " - " + mapStr;
+  }
+
+  function render(){
+    if (live.visible === false) {
+      stageEl.classList.add("hide");
+      return;
+    }
+    stageEl.classList.remove("hide");
+
+    if (hdrWrapEl) hdrWrapEl.classList.toggle("hide", !showHeader);
+
+    const label = mapLabel();
+    const bar = el("mapBar");
+    if(bar) bar.textContent = label;
+
+    const num = (live && live.matchNumber!=null && live.matchNumber!=="") ? " #" + live.matchNumber : " #1";
+    el("hTitle").textContent = "CURRENT MATCH" + num;
+    el("hSub").textContent = label;
+
+    const ids = Array.isArray(live.slotIds) && live.slotIds.filter(Boolean).length > 0 
+      ? live.slotIds.filter(Boolean) 
+      : (Array.isArray(live.teamIds) ? live.teamIds.slice() : []);
+
+    if (ids.length === 0) {
+      rowsEl.innerHTML = '<div class="empty-msg">No active teams</div>';
+      return;
     }
 
-    div.append(tm, win); 
-    rowsEl.append(div);
-    previousBooyahs[r.id] = booyahCount;
-  });
+    const rows = ids.map(id => ({
+      id, 
+      name: displayName(id, teams[id], logos[id], overrides[id]),
+      logo: (logos[id] && logos[id].url) || teamLogo(teams[id]),
+      win: (Number(wins[id]) || 0) + (Number((live.booyahCounts || {})[id]) || 0)
+    }));
 
-  if(live.booyahPulse != null) previousBooyahPulse = live.booyahPulse;
-  hasRendered = true;
+    rows.sort((a,b)=>{
+      if(sortBy === "team") return a.name.localeCompare(b.name);
+      return (b.win - a.win) || a.name.localeCompare(b.name);
+    });
 
-  tblEl.classList.remove("hide");
-  setStatus(null);
+    rowsEl.innerHTML = "";
+    const pulseAge = live.booyahPulse == null ? Infinity : Date.now() - Number(live.booyahPulse);
+    const pulseNew = live.booyahPulse != null && live.booyahPulse !== previousBooyahPulse &&
+      (hasRendered || (pulseAge >= 0 && pulseAge < 2500));
+
+    rows.forEach((r,i)=>{
+      const div = document.createElement("div");
+      const booyahCount = Number((live.booyahCounts || {})[r.id]) || 0;
+      const booyahNew = (previousBooyahs[r.id] !== undefined && booyahCount > previousBooyahs[r.id]) ||
+        (pulseNew && live.booyah === r.id && booyahCount > 0);
+      
+      div.className = "row" + (i === 0 && r.win ? " lead" : "");
+
+      const tm = document.createElement("div"); tm.className = "tm";
+      if(r.logo){
+        const img = document.createElement("img"); img.className = "logo"; img.src = r.logo; img.alt = "";
+        img.onerror = () => img.replaceWith(placeholder(r.name));
+        tm.append(img);
+      } else tm.append(placeholder(r.name));
+
+      const nm = document.createElement("div"); nm.className = "tname"; nm.textContent = r.name; tm.append(nm);
+
+      const win = document.createElement("div"); win.className = "cell win";
+      win.innerHTML = r.win > 0
+        ? "<span>" + r.win + "</span><span class='cup'>🏆</span>"
+        : "<span>" + r.win + "</span>";
+
+      if(booyahNew){ 
+        const pop = document.createElement("div"); 
+        pop.className = "booyah-pop"; 
+        pop.textContent = "BOOYAH!"; 
+        div.append(pop); 
+      }
+
+      div.append(tm, win); 
+      rowsEl.append(div);
+      previousBooyahs[r.id] = booyahCount;
+    });
+
+    if(live.booyahPulse != null) previousBooyahPulse = live.booyahPulse;
+    hasRendered = true;
+  }
+
+  render();
 }
-
-render();
 </script>
 </body>
 </html>
