@@ -209,9 +209,9 @@ ul.plain{list-style:none;display:flex;flex-direction:column;gap:5px}
         <span class="mp" id="curMap"></span>
         <span class="sp"></span>
         <button class="danger" id="resetMatch">Reset match</button>
+        <button class="danger" id="resetAllData" style="background:#8b0000; border-color:#ff4d4d; color:#fff;">RESET ALL DATA</button>
       </div>
-      <p class="hint">Reset match archives everything currently set below into History, confirms the
-        save succeeded, then clears the live broadcast and deletes all teams created in this app. Discord bot data is never changed.</p>
+      <p class="hint">Reset match archives everything currently set below into History. <b>RESET ALL DATA</b> completely wipes all match history, overview stats, teams, and Booyahs.</p>
       <div>
         <label>Leaderboard sort</label>
         <div class="btnrow">
@@ -904,6 +904,66 @@ $("resetMatch").onclick = async () => {
 
   selected = new Set();
   toast("Match reset — archived to history");
+};
+
+/* ---------- RESET ALL DATA (Complete System Wipe) ---------- */
+$("resetAllData").onclick = async () => {
+  const ok = await confirmAction({
+    title: "PERMANENTLY RESET ALL DATA?",
+    body: "This will wipe all match history, team history, Booyahs, created teams, logos, and live broadcast states across Controller, History, and Overlay pages.",
+    warn: "THIS ACTION CANNOT BE UNDONE!",
+    okLabel: "RESET ALL DATA"
+  });
+  if (!ok) return;
+
+  try {
+    // 1. Wipe database paths under /scrimzone
+    await db.ref(P.history).set(null);
+    await db.ref(P.teamHistory).set(null);
+    await db.ref(P.wins).set(null);
+    await db.ref(P.teams).set(null);
+    await db.ref(P.overrides).set(null);
+    await db.ref(P.status).set(null);
+    await db.ref(P.logos).set(null);
+
+    // 2. Clear Live broadcast state
+    await db.ref(P.live).set({
+      visible: false,
+      teamIds: [],
+      slotIds: [],
+      slotStats: null,
+      matchNumber: null,
+      date: null,
+      time: null,
+      map: null,
+      mapIndex: 1,
+      booyah: null,
+      booyahCounts: null,
+      sortBy: "win",
+      showHeader: true,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    // 3. Reset Timer
+    await db.ref(P.timer).set({ running: false, base: 0, startedAt: 0 });
+
+    // 4. Reset Local JS state variables
+    selected = new Set();
+    customTeams = {};
+    teamsCache = {};
+    overrides = {};
+    statusMap = {};
+    logosCache = {};
+
+    // 5. Force UI Update
+    renderTeamPicker();
+    renderTeamMgr();
+    renderAll();
+
+    toast("All Booyahs, matches, history, and teams have been reset!");
+  } catch (e) {
+    toast("Failed to reset database: " + e.message, true);
+  }
 };
 
 /* ---------- timer ---------- */
